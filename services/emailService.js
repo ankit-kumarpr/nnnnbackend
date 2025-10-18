@@ -4,41 +4,33 @@ const { FROM_EMAIL, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
 const transporter = nodemailer.createTransport({
   host: SMTP_HOST,
   port: Number(SMTP_PORT || 587),
-  secure: false, // Always use STARTTLS for production compatibility
+  secure: Number(SMTP_PORT) === 465, // true for 465, false for others
   auth: {
     user: SMTP_USER,
     pass: SMTP_PASS
   },
-  // Production-optimized timeout settings for Render
-  connectionTimeout: 20000, // 20 seconds (reduced for Render)
-  greetingTimeout: 10000, // 10 seconds (reduced for Render)
-  socketTimeout: 20000, // 20 seconds (reduced for Render)
+  // Simplified timeout settings for better compatibility
+  connectionTimeout: 60000, // 60 seconds
+  greetingTimeout: 30000, // 30 seconds
+  socketTimeout: 60000, // 60 seconds
   // Disable TLS verification for better compatibility
   tls: {
-    rejectUnauthorized: false,
-    ciphers: 'SSLv3'
+    rejectUnauthorized: false
   },
-  // Disable verification in production to avoid startup timeouts
-  ignoreTLS: false,
-  requireTLS: false,
   // Simple retry settings
-  retryDelay: 1000, // 1 second between retries
-  maxRetries: 1, // Reduced retries for production
+  retryDelay: 2000, // 2 seconds between retries
+  maxRetries: 2, // Maximum number of retries
 });
 
-// Skip verification in production to avoid timeout issues
-if (process.env.NODE_ENV !== 'production') {
-  transporter.verify((error, success) => {
-    if (error) {
-      console.error('❌ Email transporter verification failed:', error.message);
-      console.log('📧 Email service will still work, but verification failed');
-    } else {
-      console.log('✅ Email transporter is ready to send messages');
-    }
-  });
-} else {
-  console.log('📧 Email transporter configured (verification skipped in production)');
-}
+// Verify transporter configuration with better error handling
+transporter.verify((error, success) => {
+  if (error) {
+    console.error('❌ Email transporter verification failed:', error.message);
+    console.log('📧 Email service will still work, but verification failed');
+  } else {
+    console.log('✅ Email transporter is ready to send messages');
+  }
+});
 
 async function sendMail({ to, subject, html, text }) {
   try {
