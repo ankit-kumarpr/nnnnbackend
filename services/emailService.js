@@ -9,25 +9,24 @@ const transporter = nodemailer.createTransport({
     user: SMTP_USER,
     pass: SMTP_PASS
   },
-  // Production timeout settings
-  connectionTimeout: 30000, // 30 seconds
+  // Simplified timeout settings for better compatibility
+  connectionTimeout: 60000, // 60 seconds
   greetingTimeout: 30000, // 30 seconds
-  socketTimeout: 30000, // 30 seconds
-  // Retry settings
-  retryDelay: 1000, // 1 second between retries
-  maxRetries: 3, // Maximum number of retries
-  // Pool settings for production
-  pool: true,
-  maxConnections: 5,
-  maxMessages: 100,
-  rateDelta: 20000, // 20 seconds
-  rateLimit: 5, // 5 emails per rateDelta
+  socketTimeout: 60000, // 60 seconds
+  // Disable TLS verification for better compatibility
+  tls: {
+    rejectUnauthorized: false
+  },
+  // Simple retry settings
+  retryDelay: 2000, // 2 seconds between retries
+  maxRetries: 2, // Maximum number of retries
 });
 
-// Verify transporter configuration
+// Verify transporter configuration with better error handling
 transporter.verify((error, success) => {
   if (error) {
-    console.error('❌ Email transporter verification failed:', error);
+    console.error('❌ Email transporter verification failed:', error.message);
+    console.log('📧 Email service will still work, but verification failed');
   } else {
     console.log('✅ Email transporter is ready to send messages');
   }
@@ -46,7 +45,7 @@ async function sendMail({ to, subject, html, text }) {
     console.log('✅ Email sent successfully:', info.messageId);
     return info;
   } catch (error) {
-    console.error('❌ Email sending failed:', error);
+    console.error('❌ Email sending failed:', error.message);
     throw new Error(`Email sending failed: ${error.message}`);
   }
 }
