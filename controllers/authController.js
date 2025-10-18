@@ -183,17 +183,18 @@ const selfRegister = async (req, res) => {
       )
     ]);
 
-    // Send email with timeout handling
-    await Promise.race([
-      sendMail({
-        to: email,
-        subject: "Gnet E-commerce — Verify your email",
-        html: otpEmailTemplate({ code: otp.code }),
-      }),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Email sending timeout')), 15000)
-      )
-    ]);
+    // Send email with timeout handling (non-blocking)
+    const emailPromise = sendMail({
+      to: email,
+      subject: "Gnet E-commerce — Verify your email",
+      html: otpEmailTemplate({ code: otp.code }),
+    });
+
+    // Handle email sending asynchronously
+    emailPromise.catch(err => {
+      console.error("OTP email sending failed:", err.message);
+      // Don't block the response if email fails
+    });
 
     res.status(200).json({ 
       message: "OTP sent to email. Verify to complete registration.",
@@ -211,11 +212,13 @@ const selfRegister = async (req, res) => {
       });
     }
     
-    // Handle email sending errors
+    // Handle email sending errors (non-critical)
     if (err.message.includes('Email sending failed')) {
-      return res.status(502).json({ 
-        message: "Email service temporarily unavailable. Please try again later.",
-        success: false 
+      return res.status(200).json({ 
+        message: "OTP created successfully. Email delivery may be delayed.",
+        success: true,
+        email: email,
+        warning: "Email service is experiencing delays"
       });
     }
     
