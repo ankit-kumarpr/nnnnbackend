@@ -8,7 +8,7 @@ const {
   otpEmailTemplate,
   welcomeForUserTemplate,
   welcomeForIndividualTemplate,
-} = require("../services/emailService-render");
+} = require("../services/emailService-fallback");
 const {
   signAccessToken,
   signRefreshToken,
