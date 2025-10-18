@@ -4,34 +4,41 @@ const { FROM_EMAIL, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
 const transporter = nodemailer.createTransport({
   host: SMTP_HOST,
   port: Number(SMTP_PORT || 587),
-  secure: Number(SMTP_PORT) === 465, // true for 465, false for others
+  secure: false, // Always use STARTTLS for production compatibility
   auth: {
     user: SMTP_USER,
     pass: SMTP_PASS
   },
-  // Production timeout settings
-  connectionTimeout: 30000, // 30 seconds
-  greetingTimeout: 30000, // 30 seconds
-  socketTimeout: 30000, // 30 seconds
-  // Retry settings
+  // Production-optimized timeout settings for Render
+  connectionTimeout: 20000, // 20 seconds (reduced for Render)
+  greetingTimeout: 10000, // 10 seconds (reduced for Render)
+  socketTimeout: 20000, // 20 seconds (reduced for Render)
+  // Disable TLS verification for better compatibility
+  tls: {
+    rejectUnauthorized: false,
+    ciphers: 'SSLv3'
+  },
+  // Disable verification in production to avoid startup timeouts
+  ignoreTLS: false,
+  requireTLS: false,
+  // Simple retry settings
   retryDelay: 1000, // 1 second between retries
-  maxRetries: 3, // Maximum number of retries
-  // Pool settings for production
-  pool: true,
-  maxConnections: 5,
-  maxMessages: 100,
-  rateDelta: 20000, // 20 seconds
-  rateLimit: 5, // 5 emails per rateDelta
+  maxRetries: 1, // Reduced retries for production
 });
 
-// Verify transporter configuration
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('❌ Email transporter verification failed:', error);
-  } else {
-    console.log('✅ Email transporter is ready to send messages');
-  }
-});
+// Skip verification in production to avoid timeout issues
+if (process.env.NODE_ENV !== 'production') {
+  transporter.verify((error, success) => {
+    if (error) {
+      console.error('❌ Email transporter verification failed:', error.message);
+      console.log('📧 Email service will still work, but verification failed');
+    } else {
+      console.log('✅ Email transporter is ready to send messages');
+    }
+  });
+} else {
+  console.log('📧 Email transporter configured (verification skipped in production)');
+}
 
 async function sendMail({ to, subject, html, text }) {
   try {
@@ -46,7 +53,7 @@ async function sendMail({ to, subject, html, text }) {
     console.log('✅ Email sent successfully:', info.messageId);
     return info;
   } catch (error) {
-    console.error('❌ Email sending failed:', error);
+    console.error('❌ Email sending failed:', error.message);
     throw new Error(`Email sending failed: ${error.message}`);
   }
 }

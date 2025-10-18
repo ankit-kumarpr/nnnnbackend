@@ -80,6 +80,7 @@ app.use('/gnet/vendor', vendorRoutes);
 app.use('/gnet/category', categoryRoutes);
 app.use('/gnet/service', serviceRoutes);
 app.use('/gnet/search', require('./routes/search'));
+app.use('/gnet/email', require('./routes/emailTest'));
 
 // Health check endpoint
 app.get('/gnet/health', (req, res) => {
